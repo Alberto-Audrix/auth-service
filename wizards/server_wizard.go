@@ -11,7 +11,8 @@ func RegisterServer(router *gin.Engine) {
 	auth := router.Group("/auth")
 	{
 		auth.POST("/login", UserHttp.Login)
-		auth.POST("/logout", UserHttp.SignUp)
+		auth.POST("/signup", UserHttp.SignUp)
+		auth.PUT("/logout", SessionHttp.Logout)
 
 		auth.Use(middlewares.AuthMiddleware())
 		auth.GET("/me", UserHttp.GetCurrentUser)

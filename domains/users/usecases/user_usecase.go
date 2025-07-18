@@ -1,7 +1,6 @@
 package usecases
 
 import (
-	sessionUsecase "bootcamp-content-interaction-service/domains/sessions/usecases"
 	"bootcamp-content-interaction-service/domains/users"
 	"bootcamp-content-interaction-service/domains/users/models/dto"
 	"bootcamp-content-interaction-service/domains/users/models/dto/requests"
@@ -51,7 +50,8 @@ func (u userUseCase) Login(ctx context.Context, request *requests.LoginRequest) 
 		return nil, err
 	}
 
-	err = sessionUsecase.CreateSession(ctx, user.ID, tokenString, 1)
+	revoked := 1
+	err = u.repo.CreateSession(ctx, user.ID, tokenString, revoked)
 
 	if err != nil {
 		return nil, err

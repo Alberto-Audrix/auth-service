@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	sessions "bootcamp-content-interaction-service/domains/sessions/entities"
 	"bootcamp-content-interaction-service/domains/users"
 	"bootcamp-content-interaction-service/domains/users/entities"
 	"bootcamp-content-interaction-service/infrastructures"
@@ -23,7 +24,7 @@ func NewDatabaseUserRepository(db infrastructures.Database) users.UserRepository
 func (repo databaseUserRepository) FindByUsername(ctx context.Context, username string) (*entities.User, error) {
 	var user entities.User
 
-	result := repo.db.GetInstance().Preload("Wallet").First(&user, "username = ?", username)
+	result := repo.db.GetInstance().First(&user, "username = ?", username)
 
 	if result.Error != nil {
 		return nil, result.Error
@@ -46,6 +47,25 @@ func (repo databaseUserRepository) Create(ctx context.Context, name string, user
 			Country:   country,
 			Profile:   profile,
 			CreatedAt: time.Now(),
+		},
+	)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (repo databaseUserRepository) CreateSession(ctx context.Context, userId uuid.UUID, refreshToken string, isRevoked int) error {
+	result := repo.db.GetInstance().Create(
+		&sessions.Session{
+			ID:           uuid.New(),
+			UserID:       userId,
+			RefreshToken: refreshToken,
+			IsRevoked:    isRevoked,
+			CreatedAt:    time.Now(),
+			ExpiredAt:    time.Now().Add(1 * time.Hour),
 		},
 	)
 

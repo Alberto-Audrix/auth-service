@@ -1,5 +1,5 @@
 package requests
 
 type LogoutRequest struct {
-	IsRevoked string `json:"is_revoked" validate:"required"`
+	IsRevoked int `json:"is_revoked"`
 }

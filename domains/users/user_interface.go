@@ -6,6 +6,8 @@ import (
 	"bootcamp-content-interaction-service/domains/users/models/dto/responses"
 	sharedresponses "bootcamp-content-interaction-service/shared/models/responses"
 	"context"
+
+	"github.com/google/uuid"
 )
 
 type UserUseCase interface {
@@ -17,4 +19,5 @@ type UserUseCase interface {
 type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*entities.User, error)
 	Create(ctx context.Context, name string, username string, email string, password string, bio string, gender string, phone string, country string, profile string) error
+	CreateSession(ctx context.Context, userId uuid.UUID, refreshToken string, isRevoked int) error
 }

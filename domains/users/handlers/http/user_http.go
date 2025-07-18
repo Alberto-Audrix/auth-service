@@ -5,6 +5,7 @@ import (
 	"bootcamp-content-interaction-service/domains/users/models/dto/requests"
 	"bootcamp-content-interaction-service/shared/models/responses"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
@@ -50,6 +51,8 @@ func (handler *UserHttp) Login(c *gin.Context) {
 		return
 	}
 
+	c.Header("Authorization", "Bearer "+result.AccessToken)
+
 	c.JSON(http.StatusOK, responses.BasicResponse{
 		Data: result,
 	})
@@ -63,6 +66,15 @@ func (handler *UserHttp) GetCurrentUser(c *gin.Context) {
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, responses.BasicResponse{
 			Error: err.Error(),
+		})
+		return
+	}
+
+	authHeader := c.GetHeader("Authorization")
+
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "missing or invalid Authorization header",
 		})
 		return
 	}

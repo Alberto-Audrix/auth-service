@@ -20,13 +20,28 @@ func NewDatabaseSessionRepository(db infrastructures.Database) sessions.SessionR
 	}
 }
 
-func (repo databaseSessionRepository) CreateSession(ctx context.Context, userId uuid.UUID, refreshToken string, isRevoked int64) error {
+func (repo databaseSessionRepository) Create(ctx context.Context, userId uuid.UUID, refreshToken string, isRevoked int) error {
 	result := repo.db.GetInstance().Create(
 		&entities.Session{
 			ID:           uuid.New(),
 			UserID:       userId,
 			RefreshToken: refreshToken,
+			IsRevoked:    isRevoked,
 			CreatedAt:    time.Now(),
+		},
+	)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return nil
+}
+
+func (repo databaseSessionRepository) Logout(ctx context.Context, isRevoked int) error {
+	result := repo.db.GetInstance().Updates(
+		&entities.Session{
+			IsRevoked: isRevoked,
 		},
 	)
 

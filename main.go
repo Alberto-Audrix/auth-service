@@ -1,6 +1,7 @@
 package main
 
 import (
+	sessions "bootcamp-content-interaction-service/domains/sessions/entities"
 	users "bootcamp-content-interaction-service/domains/users/entities"
 	"bootcamp-content-interaction-service/wizards"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 func main() {
 	wizards.PostgresDatabase.GetInstance().AutoMigrate(
 		&users.User{},
+		&sessions.Session{},
 	)
 
 	router := gin.Default()
