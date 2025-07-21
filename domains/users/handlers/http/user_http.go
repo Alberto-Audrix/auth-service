@@ -60,8 +60,10 @@ func (handler *UserHttp) Login(c *gin.Context) {
 
 func (handler *UserHttp) GetCurrentUser(c *gin.Context) {
 	ctx := c.Request.Context()
+	authorization := c.GetHeader("Authorization")
+	token := strings.TrimPrefix(authorization, "Bearer ")
 
-	res, err := handler.uc.GetCurrentUser(ctx)
+	res, err := handler.uc.GetCurrentUser(ctx, token)
 
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, responses.BasicResponse{

@@ -4,50 +4,71 @@ import (
 	"bootcamp-content-interaction-service/domains/sessions"
 	"bootcamp-content-interaction-service/domains/sessions/entities"
 	"bootcamp-content-interaction-service/infrastructures"
+	"bootcamp-content-interaction-service/shared/util"
 	"context"
+	"encoding/json"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type databaseSessionRepository struct {
-	db infrastructures.Database
+	db         infrastructures.Database
+	redisCache *redis.Client
+	logger     util.Logger
 }
 
-func NewDatabaseSessionRepository(db infrastructures.Database) sessions.SessionRepository {
+func NewDatabaseSessionRepository(db infrastructures.Database, redisClient *redis.Client, logger util.Logger) sessions.SessionRepository {
 	return databaseSessionRepository{
-		db: db,
+		db:         db,
+		redisCache: redisClient,
+		logger:     logger,
 	}
 }
 
-func (repo databaseSessionRepository) Create(ctx context.Context, userId uuid.UUID, refreshToken string, isRevoked int) error {
-	result := repo.db.GetInstance().Create(
-		&entities.Session{
-			ID:           uuid.New(),
-			UserID:       userId,
-			RefreshToken: refreshToken,
-			IsRevoked:    isRevoked,
-			CreatedAt:    time.Now(),
-		},
-	)
+func (repo databaseSessionRepository) Logout(ctx context.Context, session *entities.Session, token string) (*entities.Session, error) {
+	repo.logger.Info("Attempting to logout")
 
+	result := repo.db.GetInstance().WithContext(ctx).Save(session)
 	if result.Error != nil {
-		return result.Error
+		return nil, result.Error
 	}
 
-	return nil
+	postJSON, err := json.Marshal(session)
+	if err == nil {
+		key := "post:" + session.ID.String()
+		_ = repo.redisCache.Set(ctx, key, postJSON, time.Hour).Err()
+		repo.logger.Info("Update session in redis",
+			zap.String("post_id", session.ID.String()),
+		)
+	}
+
+	return session, nil
 }
 
-func (repo databaseSessionRepository) Logout(ctx context.Context, isRevoked int) error {
-	result := repo.db.GetInstance().Updates(
-		&entities.Session{
-			IsRevoked: isRevoked,
-		},
-	)
+func (repo databaseSessionRepository) FindSession(ctx context.Context, token string) (*entities.Session, error) {
+	var session entities.Session
+	var logger = zap.NewExample()
+	key := "session:" + token
 
-	if result.Error != nil {
-		return result.Error
+	cached, err := repo.redisCache.Get(ctx, key).Result()
+	if err == nil {
+		logger.Info("Redis HIT: " + key)
+		if err := json.Unmarshal([]byte(cached), &session); err == nil {
+			return &session, nil
+		}
 	}
 
-	return nil
+	result := repo.db.GetInstance().WithContext(ctx).Where("refresh_token = ?", token).First(&session)
+	logger.Info("Get from DB with refresh token" + token)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	postJSON, _ := json.Marshal(session)
+	_ = repo.redisCache.Set(ctx, key, postJSON, time.Hour).Err()
+	logger.Info("Set session in redis cache " + string(postJSON))
+
+	return &session, nil
 }

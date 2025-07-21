@@ -41,7 +41,7 @@ func (u userUseCase) Login(ctx context.Context, request *requests.LoginRequest) 
 			"id":       user.ID,
 			"username": user.Username,
 			"name":     user.Name,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+			"exp":      time.Now().Add(time.Hour).Unix(),
 		})
 
 	tokenString, err := token.SignedString(constant.JWT_SECRET)
@@ -62,12 +62,26 @@ func (u userUseCase) Login(ctx context.Context, request *requests.LoginRequest) 
 	}, nil
 }
 
-func (uc userUseCase) GetCurrentUser(ctx context.Context) (*responses.CurrentUserResponse, error) {
+func (uc userUseCase) GetCurrentUser(ctx context.Context, token string) (*responses.CurrentUserResponse, error) {
 	authUserDto := ctx.Value("user").(*dto.AuthUserDto)
 
-	user, err := uc.repo.FindByUsername(ctx, authUserDto.Name)
+	user, err := uc.repo.FindById(ctx, authUserDto.UserId)
 
 	if err != nil {
+		return nil, err
+	}
+
+	session, err := uc.repo.FindSession(ctx, token)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if time.Now().After(session.ExpiredAt) {
+		return nil, err
+	}
+
+	if session.IsRevoked == 0 {
 		return nil, err
 	}
 
@@ -75,6 +89,7 @@ func (uc userUseCase) GetCurrentUser(ctx context.Context) (*responses.CurrentUse
 		Id:       user.ID.String(),
 		Name:     user.Name,
 		Username: user.Username,
+		Token:    session.RefreshToken,
 	}, nil
 }
 
