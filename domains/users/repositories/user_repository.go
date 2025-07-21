@@ -44,7 +44,7 @@ func (repo databaseUserRepository) FindByUsername(ctx context.Context, username 
 		}
 	}
 
-	result := repo.db.GetInstance().WithContext(ctx).Where("id = ?", username).First(&user)
+	result := repo.db.GetInstance().WithContext(ctx).Where("username = ?", username).First(&user)
 	repo.logger.Info("Get from DB",
 		zap.String("username", username),
 	)
